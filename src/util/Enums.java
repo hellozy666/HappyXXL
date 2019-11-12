@@ -6,7 +6,7 @@ import java.util.Random;
  * 返回随机泛型值
  */
 public class Enums {
-    private static Random rand = new Random(47);
+    private static Random rand = new Random();
 
     public static <T extends Enum<T>> T random(Class<T> ec) {
         return random(ec.getEnumConstants());

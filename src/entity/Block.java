@@ -1,20 +1,11 @@
 package entity;
 
-import util.Enums;
-
 /**
- *  方块
+ *  抽象方块类
  */
-public class Block {
+public abstract class Block {
     //水果元素
-    private Fruit element;
-
-    public Block() {
-    }
-
-    public Block(Fruit fruit) {
-        element = fruit;
-    }
+    public Fruit element;
 
     public Fruit getElement() {
         return element;
@@ -24,8 +15,11 @@ public class Block {
         this.element = element;
     }
 
-    public static void main(String[] args) {
-        Block block = new Block(Enums.random(Fruit.class));
-        System.out.println(block.element);
+    //该方框能否选中
+    public abstract boolean canSelect();
+
+    @Override
+    public String toString() {
+        return "Block{ " + element + "}";
     }
 }
