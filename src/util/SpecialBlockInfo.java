@@ -3,7 +3,7 @@ package util;
 import java.util.ArrayList;
 
 /**
- * 定义特殊方块的位置
+ * 定义特殊方块的位置（配置文件形式？）
  * create by Zhouyang on 2019/11/12 15:24
  */
 public class SpecialBlockInfo {

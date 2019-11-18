@@ -1,11 +1,13 @@
 package entity;
 
+import java.util.Objects;
+
 /**
  *  抽象方块类
  */
 public abstract class Block {
     //水果元素
-    public Fruit element;
+    protected Fruit element;
 
     public Fruit getElement() {
         return element;
@@ -21,5 +23,18 @@ public abstract class Block {
     @Override
     public String toString() {
         return "Block{ " + element + "}";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Block block = (Block) o;
+        return element == block.element;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(element);
     }
 }
