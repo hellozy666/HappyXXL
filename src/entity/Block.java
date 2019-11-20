@@ -20,6 +20,10 @@ public abstract class Block {
     //该方框能否选中
     public abstract boolean canSelect();
 
+    public void xiao() {
+
+    }
+
     @Override
     public String toString() {
         return "Block{ " + element + "}";
@@ -37,4 +41,5 @@ public abstract class Block {
     public int hashCode() {
         return Objects.hash(element);
     }
+
 }

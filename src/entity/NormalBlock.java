@@ -16,7 +16,7 @@ public class NormalBlock extends Block{
 
     @Override
     public String toString() {
-        return "NormalBlock{ " + element +
+        return "Normal{ " + element +
                 " }";
     }
 }

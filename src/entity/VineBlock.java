@@ -21,7 +21,12 @@ public class VineBlock extends Block {
     }
 
     @Override
+    public void xiao() {
+        entwined = false;
+    }
+
+    @Override
     public String toString() {
-        return "VineBlock{ " + element + " }";
+        return "Vine{ " + element + " }";
     }
 }

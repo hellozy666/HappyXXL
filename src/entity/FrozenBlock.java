@@ -25,7 +25,12 @@ public class FrozenBlock extends Block {
     }
 
     @Override
+    public void xiao() {
+        frozenLevel--;
+    }
+
+    @Override
     public String toString() {
-        return "FrozenBlock{ " + element + " }";
+        return "Frozen{ " + element + " }";
     }
 }
