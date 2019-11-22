@@ -3,9 +3,7 @@ package controller;
 import entity.*;
 import util.Enums;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * create by Zhouyang on 2019/11/11 16:41
@@ -83,9 +81,96 @@ public class Game {
         block2 = temp;
     }
 
+    private void xiaochu(HashMap<String, ArrayList<Location>> ... readyToXiao) {
+        //消除方块
+        Block[][] blocks = board.getBlocks();
+        for (HashMap<String, ArrayList<Location>> map : readyToXiao) {
+            map.forEach((key, value) -> value.forEach(location -> {
+                blocks[location.getX()][location.getY()].xiao();
+            }));
+        }
+        
+        //计算消除区域，用于下沉方块
+        int xbase = Integer.MAX_VALUE,
+                xlen = 0,
+                y0 = -1,
+                yn = -1,
+                ybase = Integer.MAX_VALUE,
+                ylen = 0,
+                x0 = -1,
+                xn = -1; //消除区域
+        for (HashMap<String, ArrayList<Location>> map : readyToXiao) {
+            if (!map.isEmpty()) {
+                ArrayList<Location> height = map.get("height");
+                ArrayList<Location> vertical = map.get("vertical");
+
+                if (!height.isEmpty()) {
+                    xlen++;
+                    xbase = Math.min(height.get(0).getX(), xbase);
+
+                    //y的顺序不定
+                    int a = height.get(0).getY();
+                    int b = height.get(height.size() - 1).getY();
+
+                    y0 = Math.min(a, b);
+                    yn = Math.max(a, b);
+                }
+
+                if (!vertical.isEmpty()) {
+                    ylen++;
+                    ybase = Math.min(vertical.get(0).getY(), ybase);
+
+                    // x的顺序不定
+                    int a = vertical.get(0).getX();
+                    int b = vertical.get(vertical.size() - 1).getX();
+
+                    x0 = Math.min(a, b);
+                    xn = Math.max(a, b);
+                }
+            }
+        }
+        fall(xbase, xlen, y0, yn, ybase, ylen, x0, xn);
+    }
+
+    //方块下沉
+    private void fall(int xbase, int xlen, int y0, int yn,
+                      int ybase, int ylen, int x0, int xn) {
+        Block[][] blocks = board.getBlocks();
+
+        //水平
+        for (int i = xbase - 1; i >= 0 ; i--) {
+            for (int j = y0; j <= yn; j++) {
+                blocks[i + xlen][j].setElement(blocks[i][j].getElement());
+            }
+        }
+
+        //补全
+        for (int i = 0; i < xlen; i++) {
+            for (int j = y0; j <= yn; j++) {
+                blocks[i][j].setElement(Enums.random(Fruit.class));
+            }
+        }
+
+        //垂直
+        //由于都是从上往下沉，所以这里ybase,ylen跟上面代表含义不同
+        int len = xn - x0 + 1; //竖直高度
+        for (int i = xn; i - len >= 0 ; i--) {
+            for (int j = ybase; j < ybase + ylen  ; j++) {
+                blocks[i][j].setElement(blocks[i - len][j].getElement());
+            }
+        }
+
+        for (int i = 0; i < len; i++) {
+            for (int j = ybase; j < ybase + ylen; j++) {
+                blocks[i][j].setElement(Enums.random(Fruit.class));
+            }
+        }
+    }
+
     public void xiaochuCheck(int x1, int y1, int x2, int y2) {
         Block[][] blocks = board.getBlocks();
-        ArrayList<Location> readyToXiao = new ArrayList<>();
+        HashMap<String, ArrayList<Location>> firstXiao = null; //存放第一个块消除情况
+        HashMap<String, ArrayList<Location>> secondXiao = null; //存放第二个块消除情况
         Block block1 = blocks[x1][y1];
         Block block2 = blocks[x2][y2];
 
@@ -96,41 +181,42 @@ public class Game {
 
         if (x1 == x2) {
             if (y1 < y2) {
-                readyToXiao.addAll(rangeSearch(x1, y1, 'E'));
-                readyToXiao.addAll(rangeSearch(x2, y2, 'W'));
+                firstXiao = rangeSearch(x1, y1, 'E');
+                secondXiao = rangeSearch(x2, y2, 'W');
             } else {
-                readyToXiao.addAll(rangeSearch(x1, y1, 'W'));
-                readyToXiao.addAll(rangeSearch(x2, y2, 'E'));
+                firstXiao = rangeSearch(x1, y1, 'W');
+                secondXiao = rangeSearch(x2, y2, 'E');
             }
         }
 
         else if (y1 == y2) {
             if (x1 < x2) {
-                readyToXiao.addAll(rangeSearch(x2, y2, 'N'));
-                readyToXiao.addAll(rangeSearch(x1, y1, 'S'));
+                firstXiao = rangeSearch(x2, y2, 'N');
+                secondXiao = rangeSearch(x1, y1, 'S');
             } else {
-                readyToXiao.addAll(rangeSearch(x1, y1, 'N'));
-                readyToXiao.addAll(rangeSearch(x2, y2, 'S'));
+                firstXiao = rangeSearch(x1, y1, 'N');
+                secondXiao = rangeSearch(x2, y2, 'S');
             }
         }
 
         //交换两个方块
-        if (!readyToXiao.isEmpty()) {
+        if (!firstXiao.isEmpty() || !secondXiao.isEmpty()) {
             switchTwoBlock(block1, block2);
         }
 
         //消除方块
-        for (Location location : readyToXiao) {
-            blocks[location.getX()][location.getY()].xiao();
+        if (!firstXiao.isEmpty() || !secondXiao.isEmpty()) {
+            xiaochu(firstXiao, secondXiao);
         }
 
         //难点：方块消除之后，上方方块下落，
 
     }
 
-    private ArrayList<Location> rangeSearch(int x, int y, char direction) {
+    private HashMap<String, ArrayList<Location>> rangeSearch(int x, int y, char direction) {
         Block[][] blocks = board.getBlocks();
-        ArrayList<Location> readyToXiao = new ArrayList<>();
+        ArrayList<Location> list = new ArrayList<>();
+        HashMap<String, ArrayList<Location>> readyToXiaoMap = new HashMap<>();//存储，横向和纵向
         Block block = null;
 
         if (direction == 'N') {
@@ -178,8 +264,9 @@ public class Game {
 
             if (hEndIdx - hStartIdx >= 2) {
                 for (int i = hStartIdx; i <= hEndIdx ; i++) {
-                    readyToXiao.add(new Location(x, i));
+                    list.add(new Location(x, i));
                 }
+                readyToXiaoMap.put("height", list);
             }
 
             int vStartIdx = x;
@@ -206,8 +293,9 @@ public class Game {
             }
             if (vEndIdx - vStartIdx >= 2) {
                 for (int i = vStartIdx + 1; i <= vEndIdx ; i++) {
-                    readyToXiao.add(new Location(i, y));
+                    list.add(new Location(i, y));
                 }
+                readyToXiaoMap.put("vertical", list);
             }
         }
         else {
@@ -242,8 +330,9 @@ public class Game {
 
             if (vEndIdx - vStartIdx >= 2) {
                 for (int i = vStartIdx; i <= vEndIdx ; i++) {
-                    readyToXiao.add(new Location(i, y));
+                    list.add(new Location(i, y));
                 }
+                readyToXiaoMap.put("vertical", list);
             }
 
             int hStartIdx = y;
@@ -270,11 +359,12 @@ public class Game {
 
             if (hEndIdx - hStartIdx >= 2) {
                 for (int i = hStartIdx + 1; i <= hEndIdx ; i++) {
-                    readyToXiao.add(new Location(x, i));
+                    list.add(new Location(x, i));
                 }
+                readyToXiaoMap.put("height", list);
             }
         }
-        return readyToXiao;
+        return readyToXiaoMap;
     }
 
     public void getInput(int x1, int y1, int x2, int y2) {
