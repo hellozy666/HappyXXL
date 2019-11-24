@@ -74,11 +74,11 @@ public class Game {
     /**
      * 交换两个方块
      */
-    public void switchTwoBlock(Block block1, Block block2) {
-        Block temp = new NormalBlock(Fruit.Apple);
-        temp = block1;
-        block1 = block2;
-        block2 = temp;
+    private void switchTwoBlock(Block block1, Block block2) {
+        Fruit temp = Fruit.Apple;
+        temp = block1.getElement();
+        block1.setElement(block2.getElement());
+        block2.setElement(temp);
     }
 
     private void xiaochu(HashMap<String, ArrayList<Location>> ... readyToXiao) {
@@ -89,79 +89,58 @@ public class Game {
                 blocks[location.getX()][location.getY()].xiao();
             }));
         }
-        
-        //计算消除区域，用于下沉方块
-        int xbase = Integer.MAX_VALUE,
-                xlen = 0,
-                y0 = -1,
-                yn = -1,
-                ybase = Integer.MAX_VALUE,
-                ylen = 0,
-                x0 = -1,
-                xn = -1; //消除区域
+
         for (HashMap<String, ArrayList<Location>> map : readyToXiao) {
+            //消除范围相关的变量
+            int xbase;
+            int xlen;
+            int y0;
+            int yn;
+
             if (!map.isEmpty()) {
                 ArrayList<Location> height = map.get("height");
                 ArrayList<Location> vertical = map.get("vertical");
 
-                if (!height.isEmpty()) {
-                    xlen++;
-                    xbase = Math.min(height.get(0).getX(), xbase);
+                if (height != null && !height.isEmpty()) {
+                    xlen = 1;
+                    xbase = height.get(0).getX();
+                    y0 = height.get(0).getY();
+                    yn = height.get(height.size() - 1).getY();
 
-                    //y的顺序不定
-                    int a = height.get(0).getY();
-                    int b = height.get(height.size() - 1).getY();
-
-                    y0 = Math.min(a, b);
-                    yn = Math.max(a, b);
+                    fall(xbase, xlen, y0, yn);
                 }
 
-                if (!vertical.isEmpty()) {
-                    ylen++;
-                    ybase = Math.min(vertical.get(0).getY(), ybase);
+                if (vertical != null && !vertical.isEmpty()) {
+                    xlen = vertical.size();
+                    xbase = vertical.get(0).getX();
+                    y0 = vertical.get(0).getY();
+                    yn = y0;
 
-                    // x的顺序不定
-                    int a = vertical.get(0).getX();
-                    int b = vertical.get(vertical.size() - 1).getX();
-
-                    x0 = Math.min(a, b);
-                    xn = Math.max(a, b);
+                    //如果有 T 字型的消除，水平下沉之后，竖直方向下沉深度为 xlen - 1
+                    if (map.size() == 2) {
+                        fall(xbase, xlen - 1, y0, yn);
+                    } else {
+                        fall(xbase, xlen, y0, yn);
+                    }
                 }
             }
         }
-        fall(xbase, xlen, y0, yn, ybase, ylen, x0, xn);
     }
 
     //方块下沉
-    private void fall(int xbase, int xlen, int y0, int yn,
-                      int ybase, int ylen, int x0, int xn) {
+    private void fall(int xbase, int xlen, int y0, int yn) {
         Block[][] blocks = board.getBlocks();
 
-        //水平
+        //现有方块下沉
         for (int i = xbase - 1; i >= 0 ; i--) {
             for (int j = y0; j <= yn; j++) {
                 blocks[i + xlen][j].setElement(blocks[i][j].getElement());
             }
         }
 
-        //补全
+        //空白补全
         for (int i = 0; i < xlen; i++) {
             for (int j = y0; j <= yn; j++) {
-                blocks[i][j].setElement(Enums.random(Fruit.class));
-            }
-        }
-
-        //垂直
-        //由于都是从上往下沉，所以这里ybase,ylen跟上面代表含义不同
-        int len = xn - x0 + 1; //竖直高度
-        for (int i = xn; i - len >= 0 ; i--) {
-            for (int j = ybase; j < ybase + ylen  ; j++) {
-                blocks[i][j].setElement(blocks[i - len][j].getElement());
-            }
-        }
-
-        for (int i = 0; i < len; i++) {
-            for (int j = ybase; j < ybase + ylen; j++) {
                 blocks[i][j].setElement(Enums.random(Fruit.class));
             }
         }
@@ -171,6 +150,8 @@ public class Game {
         Block[][] blocks = board.getBlocks();
         HashMap<String, ArrayList<Location>> firstXiao = null; //存放第一个块消除情况
         HashMap<String, ArrayList<Location>> secondXiao = null; //存放第二个块消除情况
+        Location location1 = new Location(x1, y1);
+        Location location2 = new Location(x2, y2);
         Block block1 = blocks[x1][y1];
         Block block2 = blocks[x2][y2];
 
@@ -181,56 +162,49 @@ public class Game {
 
         if (x1 == x2) {
             if (y1 < y2) {
-                firstXiao = rangeSearch(x1, y1, 'E');
-                secondXiao = rangeSearch(x2, y2, 'W');
+                firstXiao = rangeSearch(location1, location2, 'E');
+                secondXiao = rangeSearch(location2, location1, 'W');
             } else {
-                firstXiao = rangeSearch(x1, y1, 'W');
-                secondXiao = rangeSearch(x2, y2, 'E');
+                firstXiao = rangeSearch(location1, location2, 'W');
+                secondXiao = rangeSearch(location2, location1, 'E');
             }
         }
 
         else if (y1 == y2) {
             if (x1 < x2) {
-                firstXiao = rangeSearch(x2, y2, 'N');
-                secondXiao = rangeSearch(x1, y1, 'S');
+                firstXiao = rangeSearch(location1, location2, 'S');
+                secondXiao = rangeSearch(location2, location1, 'N');
             } else {
-                firstXiao = rangeSearch(x1, y1, 'N');
-                secondXiao = rangeSearch(x2, y2, 'S');
+                firstXiao = rangeSearch(location1, location2, 'N');
+                secondXiao = rangeSearch(location2, location1, 'S');
             }
         }
 
-        //交换两个方块
         if (!firstXiao.isEmpty() || !secondXiao.isEmpty()) {
+            //交换两个方块
             switchTwoBlock(block1, block2);
-        }
-
-        //消除方块
-        if (!firstXiao.isEmpty() || !secondXiao.isEmpty()) {
+            //消除方块
             xiaochu(firstXiao, secondXiao);
         }
-
-        //难点：方块消除之后，上方方块下落，
-
     }
 
-    private HashMap<String, ArrayList<Location>> rangeSearch(int x, int y, char direction) {
+    /**
+     * 将 orginLocation 位置的方块放在 newLocation 位置时，能够消除的范围
+     * @param originLocation 原方块位置
+     * @param newLocation  新方块位置
+     * @param direction   new方块 相对于 orgin方块 的方向
+     * @return map
+     */
+    private HashMap<String, ArrayList<Location>> rangeSearch(Location originLocation,
+                                                              Location newLocation, char direction) {
         Block[][] blocks = board.getBlocks();
-        ArrayList<Location> list = new ArrayList<>();
+        ArrayList<Location> hList = new ArrayList<>();  //水平方向待消除位置
+        ArrayList<Location> vList = new ArrayList<>();  //垂直方向
         HashMap<String, ArrayList<Location>> readyToXiaoMap = new HashMap<>();//存储，横向和纵向
-        Block block = null;
+        Block block = blocks[originLocation.getX()][originLocation.getY()];
 
-        if (direction == 'N') {
-            block = blocks[x - 1][y];
-        }
-        if (direction == 'S') {
-            block = blocks[x + 1][y];
-        }
-        if (direction == 'W') {
-            block = blocks[x][y - 1];
-        }
-        if (direction == 'E') {
-            block = blocks[x][y + 1];
-        }
+        int x = newLocation.getX();
+        int y = newLocation.getY();
 
         if (direction == 'N' || direction == 'S') {
             int hStartIdx = -1;
@@ -240,62 +214,56 @@ public class Game {
             for (int i = l; i <= y + 2 && i < Board.WIDTH; i++) {
                 Block now = blocks[x][i];
 
-                if (i == y) {
+                //由于是先判定，再交换。所以 i == y 也是方块相同
+                if (i == y || now .equals( block)) {
                     if (hStartIdx == -1) {
                         hStartIdx = i;
                     }
                     hEndIdx = i;
-                }
-                if (now .equals( block)) {
-                    if (hStartIdx == -1) {
-                        hStartIdx = i;
-                    }
-                    hEndIdx = i;
-                }
-                if (!now.equals( block) && hEndIdx - hStartIdx < 2) {
-                    //过了中心，就不可能有3个相连了
-                    if (i > y) {
+                } else {
+                    if (hEndIdx - hStartIdx < 2) {
+                        //过了中心，就不可能有3个相连了
+                        if (i > y) {
+                            break;
+                        }
+                        hStartIdx = -1;
+                        hEndIdx = -1;
+                    } else {
                         break;
                     }
-                    hStartIdx = -1;
-                    hEndIdx = -1;
                 }
             }
 
             if (hEndIdx - hStartIdx >= 2) {
                 for (int i = hStartIdx; i <= hEndIdx ; i++) {
-                    list.add(new Location(x, i));
+                    hList.add(new Location(x, i));
                 }
-                readyToXiaoMap.put("height", list);
+                readyToXiaoMap.put("height", hList);
             }
 
-            int vStartIdx = x;
-            int vEndIdx = -1;
-            int iterStart = (direction == 'N') ? x + 1 : x - 1;
-            int iterEnd = (direction == 'N') ? x + 2 : x - 2;
+            int vCount = 1;
+            int iterStart = (direction == 'S') ? x + 1 : x - 2;
+            int iterEnd = (direction == 'S') ? x + 2 : x - 1;
 
-            for (int i = iterStart; ; ) {
-                if (direction == 'N' && (i > iterEnd || i >= Board.HEIGHT)) {
-                    break;
-                }
-
-                if (direction == 'S' && (i < iterEnd || i < 0)) {
-                    break;
-                }
-
+            for (int i = iterStart; i >= 0 && i < Board.HEIGHT && i <= iterEnd; i++ ) {
                 if (blocks[i][y] .equals( block )) {
-                    vEndIdx = i;
+                    vCount ++;
                 } else {
                     break;
                 }
-
-                i = (direction == 'N') ? i + 1 : i - 1;
             }
-            if (vEndIdx - vStartIdx >= 2) {
-                for (int i = vStartIdx + 1; i <= vEndIdx ; i++) {
-                    list.add(new Location(i, y));
+            //能消的情况只能是3个相连
+            if (vCount == 3) {
+                for (int i = iterStart; i <= iterEnd ; i++) {
+                    vList.add(new Location(i, y));
                 }
-                readyToXiaoMap.put("vertical", list);
+                //保证从小到大的顺讯
+                if (direction == 'S') {
+                    vList.add(0, newLocation);
+                } else {
+                    vList.add(newLocation);
+                }
+                readyToXiaoMap.put("vertical", vList);
             }
         }
         else {
@@ -306,62 +274,55 @@ public class Game {
             for (int i = l; i <= x + 2 && i < Board.HEIGHT; i++) {
                 Block now = blocks[i][y];
 
-                if (i == x) {
+                if (i == x || now .equals( block)) {
                     if (vStartIdx == -1) {
                         vStartIdx = i;
                     }
                     vEndIdx = i;
                 }
-                if (now .equals( block)) {
-                    if (vStartIdx == -1) {
-                        vStartIdx = i;
+                else {
+                    if (vEndIdx - vStartIdx < 2) {
+                        if (i > x) {
+                            break;
+                        }
+                        vStartIdx = -1;
+                        vEndIdx = -1;
                     }
-                    vEndIdx = i;
-                }
-                if (!now .equals( block ) && vEndIdx - vStartIdx < 2) {
-                    if (i > x) {
+                    else {
                         break;
                     }
-                    vStartIdx = -1;
-                    vEndIdx = -1;
                 }
-
             }
 
             if (vEndIdx - vStartIdx >= 2) {
                 for (int i = vStartIdx; i <= vEndIdx ; i++) {
-                    list.add(new Location(i, y));
+                    vList.add(new Location(i, y));
                 }
-                readyToXiaoMap.put("vertical", list);
+                readyToXiaoMap.put("vertical", vList);
             }
 
-            int hStartIdx = y;
-            int hEndIdx = -1;
-            int iterStart = (direction == 'W') ? y + 1 : y - 1;
-            int iterEnd = (direction == 'E') ? y + 2 : y - 2;
+            int hCount = 1;
+            int iterStart = (direction == 'E') ? y + 1 : y - 2;
+            int iterEnd = (direction == 'E') ? y + 2 : y - 1;
 
-            for (int i = iterStart; ; ) {
-                if (direction == 'W' && (i > iterEnd || i >= Board.WIDTH)) {
-                    break;
-                }
-                else if (direction == 'E' && (i < iterEnd || i < 0)) {
-                    break;
-                }
-
-
+            for (int i = iterStart; i >= 0 && i < Board.WIDTH && i <= iterEnd; i++) {
                 if (blocks[x][i] .equals( block )) {
-                    hEndIdx = i;
+                    hCount ++;
                 } else {
                     break;
                 }
-                i = (direction == 'W') ? i + 1 : i - 1;
             }
 
-            if (hEndIdx - hStartIdx >= 2) {
-                for (int i = hStartIdx + 1; i <= hEndIdx ; i++) {
-                    list.add(new Location(x, i));
+            if (hCount == 3) {
+                for (int i = iterStart; i <= iterEnd ; i++) {
+                    hList.add(new Location(x, i));
                 }
-                readyToXiaoMap.put("height", list);
+                if (direction == 'E') {
+                    hList.add(0, newLocation);
+                } else {
+                    hList.add(newLocation);
+                }
+                readyToXiaoMap.put("height", hList);
             }
         }
         return readyToXiaoMap;
@@ -378,17 +339,21 @@ public class Game {
         }
     }
 
-    public static void main(String[] args) {
-        Game game = new Game(Board.getBoardInstance());
-        game.startCheck();
-        Block[][] blocks = game.board.getBlocks();
-
+    private void showBoard() {
+        Block[][] blocks = board.getBlocks();
         for (int i = 0; i < blocks.length; i++) {
             for (int j = 0; j < blocks.length; j++) {
                 System.out.print(blocks[i][j]+" ");
             }
             System.out.println();
         }
+    }
+
+    public static void main(String[] args) {
+        Game game = new Game(Board.getBoardInstance());
+        game.startCheck();
+
+        game.showBoard();
         Scanner scanner = new Scanner(System.in);
         while (true) {
             String l1 = scanner.nextLine();
@@ -397,6 +362,7 @@ public class Game {
             String[] s2 = l2.split(",");
             game.getInput(Integer.parseInt(s1[0].trim()), Integer.parseInt(s1[1].trim()),
                     Integer.parseInt(s2[0].trim()), Integer.parseInt(s2[1].trim()));
+            game.showBoard();
         }
     }
 }

@@ -17,7 +17,7 @@ public class VineBlock extends Block {
 
     @Override
     public boolean canSelect() {
-        return entwined;
+        return !entwined;
     }
 
     @Override
